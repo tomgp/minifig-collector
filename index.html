@@ -1,0 +1,187 @@
+<html>
+<head>
+	<title></title>
+	<style>
+	.number-input{
+		width:5rem;
+	}
+	.chart-line{
+		fill:none;
+		stroke:#000;
+		stroke-width:5;
+	}
+	.interaction-area{
+		fill:#FFF;
+		fill-opacity:0;
+		stroke:none;
+	}
+	.highlight{
+		fill:#FFF;
+		stroke:#F00;
+		stroke-width:5;
+	}
+	</style>
+	<link href='http://fonts.googleapis.com/css?family=Raleway:400,700' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" type="text/css" href="https://raw.githubusercontent.com/tomgp/tgp-ui-styles/master/ui-style.css">
+	<script type="text/javascript" src="math.uah.edu/distributions.js"></script>
+	<script type="text/javascript" src="zepto.min.js"></script >
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+	<script type="text/javascript">
+
+		var chartConfig = {
+			height:400,
+			width:800,
+			margin:{top:20, left:20, bottom:20, right:20}
+		}
+		var svg;
+
+
+		function getDataArray(dist){
+			var data = [];
+			var cumulativeProbability = 0;
+			for(var i = dist.minValue(); i <= dist.maxValue(); i += dist.step() ){
+				cumulativeProbability += dist.density(i);
+				data.push({
+					number:i,
+					probability:dist.density(i),
+					cumulativeProbability:cumulativeProbability
+				});
+			}
+			return data.reverse();
+		}
+
+		
+
+		function calculate(){
+			var cost = parseFloat($('#cost').attr("value")),
+				varieties = parseInt($('#varieties').attr("value")),
+				dist = new CouponDistribution(varieties, varieties);
+			
+			var data = getDataArray(dist);
+
+			var probabilityScale = d3.scale.linear()
+				.range([chartConfig.height - chartConfig.margin.bottom, chartConfig.margin.top]) 				
+				.domain([0, 1]);
+
+			var purchasesScale = d3.scale.linear()
+				.range([chartConfig.margin.left, chartConfig.width - chartConfig.margin.right])
+				.domain([0, dist.maxValue()]);
+
+			var line = d3.svg.line()
+				.x(function(d) { return purchasesScale(d.number); })
+				.y(function(d) { return probabilityScale(d.cumulativeProbability); })
+				.interpolate( "linear" );
+
+			svg.transition().attr({ height:chartConfig.height });
+			svg.select('path').remove();
+			svg.append('path').attr({
+				d:function(){ return line( data ); },
+				'class':'chart-line'
+			});
+
+			var seventyFivePct = dist.quantile(0.75);
+			console.log(seventyFivePct);
+			d3.select('#highlight-point').remove();
+			var highlightPoint = svg.append('g')
+
+				.attr({
+					'id':'highlight-point',
+					transform:'translate('+purchasesScale(seventyFivePct)+','+probabilityScale(0.75)+')'
+				});
+				
+			highlightPoint.append('circle')
+					.attr({
+						'class':'highlight',
+						r:10,
+						cx:0,
+						cy:0
+					});
+			//add an interaction rectangle for each purchase slot
+
+			var rectWidth = purchasesScale(1);
+
+			svg.selectAll('.interaction-area')
+				.data(data)
+				.enter()
+					.append('rect').attr({
+						'class':'interaction-area',
+						x:function(d) { return purchasesScale(d.number) },
+						y:0,
+						width:rectWidth,
+						height:chartConfig.height
+					}).on('mouseover', function(d){
+						moveHighlight(d);
+					})
+
+			function moveHighlight(d) {
+				highlightPoint
+					.attr({
+						transform:'translate('+purchasesScale(d.number)+','+probabilityScale(d.cumulativeProbability)+')'
+					});
+
+			}
+
+		}
+
+
+		function restrictToNumber(ev){
+			console.log('key');
+			ev = (ev) ? ev : window.event;
+		    var charCode = (ev.which) ? ev.which : ev.keyCode;
+		    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+		        return false;
+		    }
+		    return true;
+		}
+
+
+		function numberRestrict(type){
+			if(type === 'float'){
+				var allowFloat = true;
+			}else{
+				allowFloat = false;
+			}
+			return function(e){
+				var a = [];
+				if(allowFloat) a.push(46);
+				//console.log(allowFloat, a)
+				for (i = 48; i < 58; i++){
+				    a.push(i);
+				}
+				if (!(a.indexOf(e.which)>=0)){ 
+					e.preventDefault();
+				}
+			};
+		}
+
+
+		$(function () { 
+			svg = d3.select('#outputs').append('svg').attr({
+				width:chartConfig.width, 
+				height:0
+			});
+
+			$('.int-input').keypress( numberRestrict() );
+			$('.float-input').keypress( numberRestrict('float') );
+			$('#calculate').click(calculate);
+		});
+	
+	</script>
+</head>
+<body>
+	<h1>Minifig madness</h1>
+	<h2>aka Coupon Collector Calculator</h2>
+	<section id="inputs">
+		<p><label>How many types of thing are there?</label><input type="text" class="number-input int-input" id="varieties" value="16"></input>
+		<p><label>How much does each thing cost?</label><input type="text" class="number-input float-input" id="cost" value="2.50"></input>
+		<p><button id="calculate">Calculate</button>
+	</section>
+	<section id="outputs"></section>
+	<footer class="reading-width">
+		<hr>
+		<p><a href="http://tomgp.github.io">Tom Pearson</a></p>
+		<p>The code for generating the distribution was written by <a href="http://www.math.uah.edu/stat/urn/Coupon.html">Kyle Sigreist at the University of Alabama in Huntsville</a> published under a creative Commons Licence (<a href="http://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>). I'm using it here unchanged.</p>
+	</footer>
+</body>
+</html>
