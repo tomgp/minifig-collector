@@ -2,24 +2,39 @@
 <head>
 	<title></title>
 	<style>
-	.number-input{
-		width:5rem;
-	}
-	.chart-line{
-		fill:none;
-		stroke:#000;
-		stroke-width:5;
-	}
-	.interaction-area{
-		fill:#FFF;
-		fill-opacity:0;
-		stroke:none;
-	}
-	.highlight{
-		fill:#FFF;
-		stroke:#F00;
-		stroke-width:5;
-	}
+		#outputs{
+			position: relative;	
+			margin-bottom: 5rem;
+		}
+		.number-input{
+			width:5rem;
+		}
+		.chart-line{
+			fill:none;
+			stroke:#000;
+			stroke-width:5;
+		}
+		.interaction-area{
+			fill:#FFF;
+			fill-opacity:0;
+			stroke:none;
+		}
+		.highlight{
+			fill:#FFF;
+			stroke:#F00;
+			stroke-width:5;
+		}
+		.info-pane{
+			position: absolute;
+			display: inline-block;
+			color: #000;
+			padding: 10px;
+			pointer-events: none;
+		}
+
+		.info-pane strong{
+			color: #F00;	
+		}
 	</style>
 	<link href='http://fonts.googleapis.com/css?family=Raleway:400,700' rel='stylesheet' type='text/css'>
 	<link rel="stylesheet" type="text/css" href="https://raw.githubusercontent.com/tomgp/tgp-ui-styles/master/ui-style.css">
@@ -33,8 +48,9 @@
 			height:400,
 			width:800,
 			margin:{top:20, left:20, bottom:20, right:20}
-		}
-		var svg;
+		},
+			svg,
+			currencyFormat = d3.format(",.2f");
 
 
 		function getDataArray(dist){
@@ -81,7 +97,6 @@
 			});
 
 			var seventyFivePct = dist.quantile(0.75);
-			console.log(seventyFivePct);
 			d3.select('#highlight-point').remove();
 			var highlightPoint = svg.append('g')
 
@@ -97,10 +112,10 @@
 						cx:0,
 						cy:0
 					});
-			//add an interaction rectangle for each purchase slot
 
-			var rectWidth = purchasesScale(1);
 
+			var rectWidth = purchasesScale(dist.minValue() + 1) - purchasesScale(dist.minValue());
+			console.log(rectWidth);
 			svg.selectAll('.interaction-area')
 				.data(data)
 				.enter()
@@ -112,14 +127,24 @@
 						height:chartConfig.height
 					}).on('mouseover', function(d){
 						moveHighlight(d);
+						setHighlightText(d);
 					})
 
 			function moveHighlight(d) {
 				highlightPoint
 					.attr({
-						transform:'translate('+purchasesScale(d.number)+','+probabilityScale(d.cumulativeProbability)+')'
+						transform:'translate(' + purchasesScale(d.number) + ',' + probabilityScale(d.cumulativeProbability) + ')'
 					});
 
+				d3.select('#info')
+					.style("left", purchasesScale(d.number) + "px")     
+      				.style("top",  probabilityScale(d.cumulativeProbability) + "px");
+			}
+
+			function setHighlightText(d){
+				var spend = '&pound;' + currencyFormat(d.number * cost);
+				var chance = Math.floor(d.cumulativeProbability * 100) + '%';
+				d3.select('#info').html('spend <strong>' + spend + '</strong> ('+d.number+' figures) <br>for a <strong>' + chance + '</strong> chance of getting the whole set')
 			}
 
 		}
@@ -170,14 +195,13 @@
 	</script>
 </head>
 <body>
-	<h1>Minifig madness</h1>
-	<h2>aka Coupon Collector Calculator</h2>
+	<h1>Minifig Collection Calculator</h1>
 	<section id="inputs">
-		<p><label>How many types of thing are there?</label><input type="text" class="number-input int-input" id="varieties" value="16"></input>
-		<p><label>How much does each thing cost?</label><input type="text" class="number-input float-input" id="cost" value="2.50"></input>
+		<p><label>How many figures are there?</label><input type="text" class="number-input int-input" id="varieties" value="16"></input>
+		<p><label>How much does each cost?</label><input type="text" class="number-input float-input" id="cost" value="2.50"></input>
 		<p><button id="calculate">Calculate</button>
 	</section>
-	<section id="outputs"></section>
+	<section id="outputs"><div class="info-pane" id="info"></div></section>
 	<footer class="reading-width">
 		<hr>
 		<p><a href="http://tomgp.github.io">Tom Pearson</a></p>
