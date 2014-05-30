@@ -56,11 +56,13 @@
 		function getDataArray(dist){
 			var data = [];
 			var cumulativeProbability = 0;
-			for(var i = dist.minValue(); i <= dist.maxValue(); i += dist.step() ){
-				cumulativeProbability += dist.density(i);
+			var min = dist.minValue(), max = dist.maxValue(), step = dist.step(); 
+			for(var i = min; i <= max; i += step ){
+				var density = dist.density(i)
+				cumulativeProbability += density;
 				data.push({
 					number:i,
-					probability:dist.density(i),
+					probability:density,
 					cumulativeProbability:cumulativeProbability
 				});
 			}
