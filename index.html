@@ -44,78 +44,38 @@
 
 	<script type="text/javascript">
 
-		var chartConfig = {
-			height:400,
-			width:800,
-			margin:{top:20, left:20, bottom:20, right:20}
-		},
-			svg,
-			currencyFormat = d3.format(",.2f");
 
 
-		function getDataArray(dist){
-			var data = [];
-			var cumulativeProbability = 0;
-			for(var i = dist.minValue(); i <= dist.maxValue(); i += dist.step() ){
-				cumulativeProbability += dist.density(i);
+
+		function getDistribution(cost, varieties){
+			var distribution = new CouponDistribution(varieties, varieties),
+				data = [],
+				cumulativeProbability = 0;
+
+			for(var i = distribution.minValue(); i <= distribution.maxValue(); i += distribution.step() ){
+				cumulativeProbability += distribution.density(i);
 				data.push({
 					number:i,
-					probability:dist.density(i),
+					probability:distribution.density(i),
 					cumulativeProbability:cumulativeProbability
 				});
 			}
-			return data.reverse();
+
+			return {
+				data:data,
+				probabilityDomain:[0, 1],
+				valueDomain:[0, data.length]
+			};
 		}
 
-		
+		function drawAxes(){
 
-		function calculate(){
-			var cost = parseFloat($('#cost').attr("value")),
-				varieties = parseInt($('#varieties').attr("value")),
-				dist = new CouponDistribution(varieties, varieties);
-			
-			var data = getDataArray(dist);
+		}
 
-			var probabilityScale = d3.scale.linear()
-				.range([chartConfig.height - chartConfig.margin.bottom, chartConfig.margin.top]) 				
-				.domain([0, 1]);
-
-			var purchasesScale = d3.scale.linear()
-				.range([chartConfig.margin.left, chartConfig.width - chartConfig.margin.right])
-				.domain([0, dist.maxValue()]);
-
-			var line = d3.svg.line()
-				.x(function(d) { return purchasesScale(d.number); })
-				.y(function(d) { return probabilityScale(d.cumulativeProbability); })
-				.interpolate( "linear" );
-
-			svg.transition().attr({ height:chartConfig.height });
-			svg.select('path').remove();
-			svg.append('path').attr({
-				d:function(){ return line( data ); },
-				'class':'chart-line'
-			});
-
-			var seventyFivePct = dist.quantile(0.75);
-			d3.select('#highlight-point').remove();
-			var highlightPoint = svg.append('g')
-
-				.attr({
-					'id':'highlight-point',
-					transform:'translate('+purchasesScale(seventyFivePct)+','+probabilityScale(0.75)+')'
-				});
-				
-			highlightPoint.append('circle')
-					.attr({
-						'class':'highlight',
-						r:10,
-						cx:0,
-						cy:0
-					});
-
-
+		function drawInteraction(){
+			/*
 			var rectWidth = purchasesScale(dist.minValue() + 1) - purchasesScale(dist.minValue());
-			console.log(rectWidth);
+
 			svg.selectAll('.interaction-area')
 				.data(data)
 				.enter()
@@ -129,6 +89,8 @@
 						moveHighlight(d);
 						setHighlightText(d);
 					})
+
+
 
 			function moveHighlight(d) {
 				highlightPoint
@@ -145,20 +107,63 @@
 				var spend = '&pound;' + currencyFormat(d.number * cost);
 				var chance = Math.floor(d.cumulativeProbability * 100) + '%';
 				d3.select('#info').html('spend <strong>' + spend + '</strong> ('+d.number+' figures) <br>for a <strong>' + chance + '</strong> chance of getting the whole set')
-			}
-
+			}*/
 		}
 
 
-		function restrictToNumber(ev){
-			console.log('key');
-			ev = (ev) ? ev : window.event;
-		    var charCode = (ev.which) ? ev.which : ev.keyCode;
-		    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
-		        return false;
-		    }
-		    return true;
+		function drawDist(data){	
+			var line = d3.svg.line()
+				.x(function(d) { return purchasesScale(d.number); })
+				.y(function(d) { return probabilityScale(d.cumulativeProbability); })
+				.interpolate( "linear" );
+
+			svg.append('path').attr({
+				d:function(){ return line( data ); },
+				'class':'chart-line'
+			});
 		}
+
+		//setup the SVG margin convention
+		
+		$(function () { 
+			var chartConfig = {
+				height:400,
+				width:800,
+				margin:{top:20, left:20, bottom:20, right:20}
+			},
+			svg = d3.select("#chart"),
+			currencyFormat = d3.format(",.2f");
+			$('.int-input').keypress( numberRestrict() );
+			$('.float-input').keypress( numberRestrict('float') );
+
+			svg = svg
+				.attr( 'width', chartConfig.width + chartConfig.margin.left + chartConfig.margin.right  )
+				.attr( 'height', chartConfig.height + chartConfig.margin.top + chartConfig.margin.bottom  )
+					.append('g')
+					.attr('transform','translate('+chartConfig.margin.left+','+chartConfig.margin.top+')');
+
+			$('#calculate').click(function(){
+				var cost = parseFloat($('#cost').attr("value")),
+					varieties = parseInt($('#varieties').attr("value")),
+					distribution = getDistribution(cost, varieties),
+					
+					probabilityScale = d3.scale.linear()
+						.range([chartConfig.height - chartConfig.margin.bottom, chartConfig.margin.top])
+						.domain( distribution.probabilityDomain ),
+
+					purchasesScale = d3.scale.linear()
+						.range([chartConfig.margin.left, chartConfig.width - chartConfig.margin.right])
+						.domain( distribution.valueDomain );
+
+				svg.append('');
+
+				drawDist( distribution.data );
+				drawAxes( distribution.valueScale, distribution.probabilityScale );
+				drawInteraction( );
+			});
+		});
+
+//input form stuff...
 
 
 		function numberRestrict(type){
@@ -179,18 +184,6 @@
 				}
 			};
 		}
-
-
-		$(function () { 
-			svg = d3.select('#outputs').append('svg').attr({
-				width:chartConfig.width, 
-				height:0
-			});
-
-			$('.int-input').keypress( numberRestrict() );
-			$('.float-input').keypress( numberRestrict('float') );
-			$('#calculate').click(calculate);
-		});
 	
 	</script>
 </head>
@@ -201,7 +194,10 @@
 		<p><label>How much does each cost?</label><input type="text" class="number-input float-input" id="cost" value="2.50"></input>
 		<p><button id="calculate">Calculate</button>
 	</section>
-	<section id="outputs"><div class="info-pane" id="info"></div></section>
+	<section id="outputs">
+		<svg id="chart"></svg>
+		<div class="info-pane" id="info"></div>
+	</section>
 	<footer class="reading-width">
 		<hr>
 		<p><a href="http://tomgp.github.io">Tom Pearson</a></p>
