@@ -1,3 +1,36 @@
+function getCouponDistribution(cost, varieties){
+    var distribution = new CouponDistribution(varieties, varieties),
+        data = [],
+        cumulativeProbability = 0;
+       console.log( distribution.step() )
+    for(var i = distribution.minValue(); i <= distribution.maxValue(); i += distribution.step() ){
+        cumulativeProbability += distribution.density(i);
+        data.push({
+            number: i,
+            probability: distribution.density(i),
+            cumulativeProbability: cumulativeProbability
+        });
+    }
+
+    return {
+        data:data,
+        probabilityDomain:[0, 1],
+        valueDomain:[0, data.length]
+    };
+}
+
+onmessage = function(ev) {
+    console.log('Message received from main script ', ev.data);
+    var result = {};
+    if(ev.data[0]==='getCouponDistribution'){
+       result = getCouponDistribution(ev.data[1], ev.data[2]);
+    }
+    postMessage( result );
+}
+
+
+////
+
 /*
 JavaScript file for Virtual Laboratories in Probability and Statistics, http://www.math.uah.edu/stat
 */
@@ -3149,6 +3182,3 @@ function OrderStatistic(d0, n0, k0){
 	};
 }
 OrderStatistic.prototype = new Distribution;
-
-
-

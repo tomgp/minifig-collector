@@ -1,44 +1,14 @@
 <html>
 <head>
-	<title></title>
+	<title>Minifig Collection Calculator</title>
 
-	<script type="text/javascript" src="math.uah.edu/distributions.js"></script>
-
-	<script type="text/javascript">
-
-
-
-
-		function getDistribution(cost, varieties){
-			var distribution = new CouponDistribution(varieties, varieties),
-				data = [],
-				cumulativeProbability = 0;
-
-			for(var i = distribution.minValue(); i <= distribution.maxValue(); i += distribution.step() ){
-				cumulativeProbability += distribution.density(i);
-				data.push({
-					number:i,
-					probability:distribution.density(i),
-					cumulativeProbability:cumulativeProbability
-				});
-			}
-
-			return {
-				data:data,
-				probabilityDomain:[0, 1],
-				valueDomain:[0, data.length]
-			};
-		}
-
-	
-	</script>
 </head>
 <body>
 	<h1>Minifig Collection Calculator</h1>
 	<section id="inputs">
 		<p><label>How many figures are there?</label><input type="text" class="number-input int-input" id="varieties" value="16"></input>
 		<p><label>How much does each cost?</label><input type="text" class="number-input float-input" id="cost" value="2.50"></input>
-		<p><button id="calculate">Calculate</button>
+		<p><a href="#" id="calculate">Calculate</a>
 	</section>
 	<section id="outputs">
 		<svg id="chart"></svg>
@@ -50,4 +20,31 @@
 		<p>The code for generating the distribution was written by <a href="http://www.math.uah.edu/stat/urn/Coupon.html">Kyle Sigreist at the University of Alabama in Huntsville</a> published under a creative Commons Licence (<a href="http://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>). I'm using it here unchanged.</p>
 	</footer>
 </body>
+	<script type="text/javascript">
+
+function getByID(id){
+    return document.getElementById(id);
+}
+
+if (window.Worker) {
+    console.log("WORK IT!");
+    var distributionWorker = new Worker("distribution-worker.js");
+    var button = getByID('calculate');
+    
+    distributionWorker.onmessage = function(ev) {
+        console.log(ev.data);
+        //DONE THINKING
+        button.innerHTML  = "Calculate";
+    }
+    
+    console.log(button);
+    button.onclick = function(){
+        //THINKING
+        button.innerHTML  = "... thinking ...";
+        distributionWorker.postMessage(['getCouponDistribution', Number( getByID('cost').value ), Number( getByID('varieties').value )]); 
+    };
+}else{
+ document.getElementById('info').innerHTML = 'Sorry, this doesn&apos;t work on older browsers &mdash; no web workers :('  
+}
+	</script>
 </html>
